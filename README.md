@@ -1,7 +1,7 @@
-# AcademiaCore
-Multi-layered student record management application featuring full CRUD operations and a clean, scalable architecture designed for maintainability and robustness.
-import sqlite3
+# Voting App(Python + SQLite)
+A command-line voting application built with Python and SQLite that demonstrates database-backed CRUD operations, admin authorization, and persistent vote tracking.
 
+This project was created to practice object-oriented programming, SQL integration, and menu-driven application design.
 
 class Voting:
     def __init__(self, db_name="Voting.db"):
