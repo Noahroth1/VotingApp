@@ -113,7 +113,7 @@ class Voting:
             print(f"Sorry — '{choice}' is not a candidate. (Your name was recorded as having voted.)")
             print("Admin could delete your name from voters if you want to allow a retry.")
         else:
-            print("Vote added ✅")
+            print("Vote added")
 
     def show_result(self):
         cursor = self.conn.execute(
