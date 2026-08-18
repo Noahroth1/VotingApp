@@ -1,182 +1,75 @@
-# Voting App(Python + SQLite)
-A command-line voting application built with Python and SQLite that demonstrates database-backed CRUD operations, admin authorization, and persistent vote tracking.
+# Voting App
 
-This project was created to practice object-oriented programming, SQL integration, and menu-driven application design.
+A command-line voting application built with Python and SQLite. Administrators can manage candidates, voters can cast one vote each, and results are stored locally between sessions.
 
-class Voting:
-    def __init__(self, db_name="Voting.db"):
-        self.conn = sqlite3.connect(db_name)
-        self.conn.execute("PRAGMA foreign_keys = ON;")
-        self.admin_password = "Noah123"
+## Features
 
-        self.create_candidate_table()
-        self.create_user_table()
+- Add and remove candidates through an administrator menu
+- Limit voting to one vote per voter name
+- Display candidates and their current vote totals
+- Rank results by vote count and announce the winner
+- Store candidates, voters, and results in a local SQLite database
+- Reject empty names and duplicate candidates
+- Limit administrator login to three attempts
 
-    def create_user_table(self):
-        query = """
-        CREATE TABLE IF NOT EXISTS voters (
-            user_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_name TEXT NOT NULL UNIQUE
-        );
-        """
-        self.conn.execute(query)
-        self.conn.commit()
+## Requirements
 
-    def create_candidate_table(self):
-        query = """
-        CREATE TABLE IF NOT EXISTS candidates (
-            candidate_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            candidate_name TEXT NOT NULL UNIQUE,
-            candidate_votes INTEGER NOT NULL DEFAULT 0
-        );
-        """
-        self.conn.execute(query)
-        self.conn.commit()
+- Python 3.6 or later
+- SQLite support, included with standard Python installations
+- No third-party packages
 
-    def show_candidates(self):
-        cursor = self.conn.execute(
-            "SELECT candidate_name, candidate_votes FROM candidates ORDER BY candidate_name;"
-        )
-        rows = cursor.fetchall()
-        if not rows:
-            print("No candidates yet. Ask admin to add candidates first.")
-            return False
+## Run the App
 
-        print("\nCandidates:")
-        for name, votes in rows:
-            print(f"- {name}: {votes}")
-        print()
-        return True
+Clone the repository and move into the project directory:
 
-    def add_candidate(self):
-        name = input("Candidate name: ").strip()
-        if not name:
-            print("Name can't be empty.")
-            return
+```bash
+git clone https://github.com/Noahroth1/VotingApp.git
+cd VotingApp
+```
 
-        try:
-            self.conn.execute(
-                "INSERT INTO candidates(candidate_name, candidate_votes) VALUES(?, 0);",
-                (name,),
-            )
-            self.conn.commit()
-            print(f"Added candidate: {name}")
-        except sqlite3.IntegrityError:
-            print("That candidate already exists.")
+Start the application:
 
-    def remove_candidate(self):
-        name = input("Candidate name to remove: ").strip()
-        if not name:
-            print("Name can't be empty.")
-            return
+```bash
+python3 VotingApp
+```
 
-        cur = self.conn.execute(
-            "DELETE FROM candidates WHERE candidate_name = ?;",
-            (name,),
-        )
-        self.conn.commit()
+The main menu provides four options:
 
-        if cur.rowcount == 0:
-            print(f"{name} is not a candidate.")
-        else:
-            print(f"{name} removed.")
+1. Open the administrator login
+2. Cast a vote
+3. View election results
+4. Exit the application
 
-    def cast_vote(self):
-        if not self.show_candidates():
-            return
+## Administrator Menu
 
-        voter_name = input("What is your name? ").strip()
-        if not voter_name:
-            print("Name can't be empty.")
-            return
-        try:
-            self.conn.execute(
-                "INSERT INTO voters(user_name) VALUES(?);",
-                (voter_name,),
-            )
-            self.conn.commit()
-        except sqlite3.IntegrityError:
-            print("Sorry — you already voted (name already recorded).")
-            return
+Select the administrator option from the main menu and enter the password configured in the `Voting` class. After logging in, an administrator can add candidates, remove candidates, or view results.
 
-        choice = input("Who would you like to vote for? ").strip()
-        if not choice:
-            print("Vote cancelled.")
-            return
+> **Note:** The current project uses a hard-coded password for demonstration purposes. A production application should store a securely hashed password outside the source code.
 
-        cur = self.conn.execute(
-            "UPDATE candidates SET candidate_votes = candidate_votes + 1 WHERE candidate_name = ?;",
-            (choice,),
-        )
-        self.conn.commit()
+## How Voting Works
 
-        if cur.rowcount == 0:
-            print(f"Sorry — '{choice}' is not a candidate. (Your name was recorded as having voted.)")
-            print("Admin could delete your name from voters if you want to allow a retry.")
-        else:
-            print("Vote added ")
+1. The application displays the available candidates.
+2. The voter enters their name.
+3. The voter chooses a candidate by entering the candidate's name.
+4. The vote total is updated in the SQLite database.
 
-    def show_result(self):
-        cursor = self.conn.execute(
-            "SELECT candidate_name, candidate_votes FROM candidates ORDER BY candidate_votes DESC, candidate_name ASC;"
-        )
-        rows = cursor.fetchall()
+Voter names must be unique, which provides a simple one-vote-per-name rule. This is suitable for a learning project, but it is not secure identity verification for a real election.
 
-        if not rows:
-            print("No candidates found.")
-            return
+## Data Storage
 
-        print("\nFinal Results:")
-        for name, votes in rows:
-            print(f"- {name}: {votes}")
+The application creates `Voting.db` in the current directory when it first runs. It contains two tables:
 
-        winner_name, winner_votes = rows[0]
-        print(f"\nWinner: {winner_name} with {winner_votes} votes\n")
+| Table | Purpose |
+| --- | --- |
+| `candidates` | Stores candidate names and vote totals |
+| `voters` | Stores voter names to prevent duplicate voting |
 
-    def admin_login(self):
-        attempts_left = 3
-        while attempts_left > 0:
-            password = input("Admin password: ")
-            if password == self.admin_password:
-                print("Access granted.")
-                self.admin_menu()
-                return
-            attempts_left -= 1
-            print(f"Access denied. Attempts left: {attempts_left}")
-        print("Too many failed attempts.")
+To start with a completely new local election, stop the application and remove `Voting.db`. This permanently deletes the locally stored candidates, voters, and results.
 
-    def admin_menu(self):
-        while True:
-            choice = input("\nAdmin: 1 add | 2 remove | 3 view results | 4 back\n> ").strip()
-            if choice == "1":
-                self.add_candidate()
-            elif choice == "2":
-                self.remove_candidate()
-            elif choice == "3":
-                self.show_result()
-            elif choice == "4":
-                print("Leaving admin menu.")
-                return
-            else:
-                print("Invalid option.")
+## Project Structure
 
-    def main_menu(self):
-        print("Voting app menu:")
-        while True:
-            choice = input("\n1 admin | 2 vote | 3 results | 4 exit\n> ").strip()
-            if choice == "1":
-                self.admin_login()
-            elif choice == "2":
-                self.cast_vote()
-            elif choice == "3":
-                self.show_result()
-            elif choice == "4":
-                print("Thank you, goodbye!")
-                self.conn.close()
-                break
-            else:
-                print("Invalid option.")
-
-
-if __name__ == "__main__":
-    Voting().main_menu()
+```text
+VotingApp/
+├── VotingApp  # Python command-line application
+└── README.md  # Project documentation
+```
